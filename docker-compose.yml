@@ -1,0 +1,67 @@
+services:
+  server-a:
+    build: ./backend
+    container_name: lb-server-a
+    environment:
+      SERVER_ID: server-a
+      SERVICE_NAME: Server Akademik
+      PORT: 3000
+      MIN_DELAY: 50
+      MAX_DELAY: 220
+    expose:
+      - "3000"
+    networks:
+      - smart-gateway-net
+    restart: unless-stopped
+
+  server-b:
+    build: ./backend
+    container_name: lb-server-b
+    environment:
+      SERVER_ID: server-b
+      SERVICE_NAME: Server Administrasi
+      PORT: 3000
+      MIN_DELAY: 80
+      MAX_DELAY: 260
+    expose:
+      - "3000"
+    networks:
+      - smart-gateway-net
+    restart: unless-stopped
+
+  server-c:
+    build: ./backend
+    container_name: lb-server-c
+    environment:
+      SERVER_ID: server-c
+      SERVICE_NAME: Server Layanan
+      PORT: 3000
+      MIN_DELAY: 40
+      MAX_DELAY: 180
+    expose:
+      - "3000"
+    networks:
+      - smart-gateway-net
+    restart: unless-stopped
+
+  gateway:
+    build: ./gateway
+    container_name: smart-gateway-load-balancer
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      SERVER_A_URL: http://server-a:3000
+      SERVER_B_URL: http://server-b:3000
+      SERVER_C_URL: http://server-c:3000
+    depends_on:
+      - server-a
+      - server-b
+      - server-c
+    networks:
+      - smart-gateway-net
+    restart: unless-stopped
+
+networks:
+  smart-gateway-net:
+    driver: bridge
