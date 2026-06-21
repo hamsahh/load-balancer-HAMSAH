@@ -1,0 +1,16 @@
+Contoh hasil yang diharapkan setelah menjalankan:
+python scripts/test_load.py --algorithm round-robin --requests 30 --workers 10
+
+Distribusi request Round Robin biasanya mendekati:
+server-a: 10 request
+server-b: 10 request
+server-c: 10 request
+
+Contoh hasil Least Connection dapat berbeda karena bergantung koneksi aktif dan delay tiap server:
+server-a: 9 request
+server-b: 8 request
+server-c: 13 request
+
+Catatan:
+- Round Robin membagi request secara bergiliran.
+- Least Connection memilih server dengan koneksi aktif paling sedikit.

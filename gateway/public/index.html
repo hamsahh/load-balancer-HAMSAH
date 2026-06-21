@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Smart Gateway Load Balancer 3 Server</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --card: #1f2937;
+      --line: #334155;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --good: #22c55e;
+      --bad: #ef4444;
+      --warn: #f59e0b;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: radial-gradient(circle at top, #1e3a8a 0, var(--bg) 38%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 32px 20px 20px;
+      text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    header h1 { margin: 0 0 8px; font-size: 32px; }
+    header p { margin: 0; color: var(--muted); }
+
+    main {
+      width: min(1120px, calc(100% - 32px));
+      margin: 24px auto 48px;
+    }
+
+    .toolbar, .panel {
+      background: rgba(17, 24, 39, 0.88);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 18px 60px rgba(0,0,0,0.25);
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .section-title {
+      font-size: 13px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    button {
+      border: 1px solid var(--line);
+      background: #0b1220;
+      color: var(--text);
+      padding: 11px 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: .18s ease;
+    }
+
+    button:hover { transform: translateY(-1px); border-color: var(--accent); }
+    button.active { background: var(--accent); color: #082f49; border-color: var(--accent); }
+
+    input {
+      background: #0b1220;
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 11px 12px;
+      width: 94px;
+      font-weight: 700;
+    }
+
+    .status-line {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 8px;
+      color: var(--muted);
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--warn);
+      display: inline-block;
+    }
+    .dot.online { background: var(--good); }
+    .dot.offline { background: var(--bad); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .server-card {
+      background: rgba(31,41,55,0.92);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 18px;
+      padding: 18px;
+    }
+
+    .server-card h3 { margin: 0 0 6px; }
+    .server-id { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+    }
+    .metric:last-child { border-bottom: 0; }
+    .metric span:first-child { color: var(--muted); }
+    .metric strong { font-size: 18px; }
+
+    .bar {
+      height: 9px;
+      background: #0b1220;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+    .fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #38bdf8, #22c55e);
+      transition: width .2s ease;
+    }
+
+    .panel { margin-bottom: 18px; }
+    pre {
+      margin: 0;
+      background: #020617;
+      border-radius: 14px;
+      padding: 14px;
+      min-height: 180px;
+      max-height: 300px;
+      overflow: auto;
+      color: #d1d5db;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      white-space: pre-wrap;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .small { color: var(--muted); font-size: 13px; }
+    .summary { margin-top: 12px; color: var(--muted); }
+
+    @media (max-width: 860px) {
+      .toolbar { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      header h1 { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Smart Gateway Load Balancer 3 Server</h1>
+    <p>Simulasi Round Robin dan Least Connection dengan monitoring real-time</p>
+  </header>
+
+  <main>
+    <section class="toolbar">
+      <div>
+        <div class="section-title">Algoritma Load Balancing</div>
+        <div class="buttons">
+          <button id="btnRoundRobin" onclick="setAlgorithm('round-robin')">Round Robin</button>
+          <button id="btnLeastConnection" onclick="setAlgorithm('least-connection')">Least Connection</button>
+        </div>
+        <div class="status-line">
+          <span><span id="wsDot" class="dot"></span> WebSocket: <strong id="wsStatus">menghubungkan...</strong></span>
+          <span>Aktif: <strong id="algorithmLabel">round-robin</strong></span>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Pengujian Request</div>
+        <div class="buttons">
+          <button onclick="sendSingleRequest()">Kirim 1 Request</button>
+          <input id="requestCount" type="number" min="1" max="100" value="15">
+          <button onclick="sendBatchRequest()">Kirim Batch</button>
+        </div>
+        <div id="testSummary" class="summary">Belum ada pengujian.</div>
+      </div>
+    </section>
+
+    <section class="grid" id="serverGrid"></section>
+
+    <section class="panel">
+      <div class="section-title">Log Aktivitas Gateway</div>
+      <pre id="activityLog">Menunggu data...</pre>
+    </section>
+
+    <section class="panel">
+      <div class="section-title">Endpoint Cepat</div>
+      <p class="small">
+        Dashboard: <strong>/</strong> · Request simulasi: <strong>/api/work</strong> · Statistik: <strong>/api/stats</strong> · Pengujian batch: <strong>/api/test</strong>
+      </p>
+    </section>
+  </main>
+
+  <script>
+    let latestState = null;
+
+    function connectWebSocket() {
+      const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+      const ws = new WebSocket(`${protocol}://${location.host}`);
+
+      ws.addEventListener('open', () => {
+        document.getElementById('wsStatus').textContent = 'terhubung';
+        document.getElementById('wsDot').className = 'dot online';
+      });
+
+      ws.addEventListener('close', () => {
+        document.getElementById('wsStatus').textContent = 'terputus, mencoba ulang...';
+        document.getElementById('wsDot').className = 'dot offline';
+        setTimeout(connectWebSocket, 1500);
+      });
+
+      ws.addEventListener('message', event => {
+        const payload = JSON.parse(event.data);
+        if (payload.type === 'state') {
+          latestState = payload.data;
+          renderState(payload.data);
+        }
+      });
+    }
+
+    function renderState(state) {
+      document.getElementById('algorithmLabel').textContent = state.algorithm;
+      document.getElementById('btnRoundRobin').classList.toggle('active', state.algorithm === 'round-robin');
+      document.getElementById('btnLeastConnection').classList.toggle('active', state.algorithm === 'least-connection');
+
+      const maxRequests = Math.max(1, ...state.servers.map(s => s.totalRequests));
+      const grid = document.getElementById('serverGrid');
+      grid.innerHTML = state.servers.map(server => {
+        const percent = Math.round((server.totalRequests / maxRequests) * 100);
+        const statusText = server.online ? 'Online' : 'Offline';
+        const latency = server.lastLatencyMs === null ? '-' : `${server.lastLatencyMs} ms`;
+        const lastError = server.lastError ? `<div class="small">Error: ${server.lastError}</div>` : '';
+
+        return `
+          <article class="server-card">
+            <h3>${server.name}</h3>
+            <div class="server-id"><span class="dot ${server.online ? 'online' : 'offline'}"></span> ${server.id} · ${statusText}</div>
+            <div class="metric"><span>Koneksi aktif</span><strong>${server.activeConnections}</strong></div>
+            <div class="metric"><span>Total request</span><strong>${server.totalRequests}</strong></div>
+            <div class="metric"><span>Latency terakhir</span><strong>${latency}</strong></div>
+            <div class="bar"><div class="fill" style="width:${percent}%"></div></div>
+            ${lastError}
+          </article>
+        `;
+      }).join('');
+
+      const logs = state.logs.map(log => {
+        if (log.status === 'info') return `[${log.time}] INFO  ${log.message}`;
+        if (log.status === 'failed') return `[${log.time}] FAIL  ${log.algorithm} -> ${log.targetId} (${log.error})`;
+        return `[${log.time}] OK    ${log.algorithm} -> ${log.targetId} | gateway ${log.latencyMs} ms | backend ${log.processingTimeMs} ms`;
+      });
+      document.getElementById('activityLog').textContent = logs.join('\n') || 'Belum ada request.';
+    }
+
+    async function setAlgorithm(algorithm) {
+      await fetch('/api/algorithm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ algorithm })
+      });
+    }
+
+    async function sendSingleRequest() {
+      const response = await fetch('/api/work');
+      const data = await response.json();
+      document.getElementById('testSummary').textContent = data.ok
+        ? `1 request selesai: ${data.gateway.targetName} (${data.gateway.latencyMs} ms)`
+        : `Request gagal: ${data.error}`;
+    }
+
+    async function sendBatchRequest() {
+      const requests = Number(document.getElementById('requestCount').value || 15);
+      document.getElementById('testSummary').textContent = `Mengirim ${requests} request...`;
+
+      const response = await fetch('/api/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requests, intervalMs: 20 })
+      });
+      const data = await response.json();
+      document.getElementById('testSummary').textContent = `Selesai. Distribusi: ${JSON.stringify(data.distribution)}`;
+    }
+
+    async function loadInitialState() {
+      const response = await fetch('/api/stats');
+      const state = await response.json();
+      renderState(state);
+    }
+
+    connectWebSocket();
+    loadInitialState();
+  </script>
+</body>
+</html>
